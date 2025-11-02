@@ -1,6 +1,6 @@
 package config
 
-var Version = "dev"
+var Version string = "dev"
 
 var CommitHash = ""
 

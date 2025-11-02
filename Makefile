@@ -21,7 +21,7 @@ generate:
 	go generate ./...
 
 build:
-	go build -o cmd/structcopy-gen/structcopy-gen -ldflags "-X 'github.com/bookweb/structcopy-gen/config.Version=${VERSION}'" cmd/structcopy-gen/main.go
+	go build -o cmd/structcopy-gen/structcopy-gen -ldflags "-X github.com/bookweb/structcopy-gen/config.Version=${VERSION}" cmd/structcopy-gen/main.go
 
 install:
 	cd cmd/structcopy-gen && go install
