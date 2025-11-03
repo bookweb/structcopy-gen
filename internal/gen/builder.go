@@ -3,6 +3,7 @@ package gen
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/bookweb/structcopy-gen/pkg/structcopy"
 	"github.com/samber/lo"
@@ -39,7 +40,8 @@ func (g *Generator) mkStructToStructAssignments(
 	for _, field := range dst.StructDef.Fields {
 		assignment, err := g.mkFieldAssignment(field, src, dst, method)
 		if err != nil {
-			fmt.Println(err)
+			g.logger.Error("", slog.Any("error", err))
+			return nil, err
 		}
 		assignments = append(assignments, assignment)
 	}
@@ -53,11 +55,19 @@ func (g *Generator) mkFieldAssignment(
 	dst structcopy.MethodResult,
 	method structcopy.Method,
 ) (structcopy.Assignment, error) {
+	skipFieldsMap := method.SkipFieldsMap
 	matchFieldsMap := method.MatchFieldsMap
 	convertersMap := method.ConvertersMap
 	matchMethodsMap := method.MatchMethodsMap
 
 	srcFieldName := field.Name
+
+	dstSkipField := false
+	_, ok := skipFieldsMap[field.Name]
+	if ok {
+		dstSkipField = true
+	}
+
 	matchSrcFieldName, ok := matchFieldsMap[field.Name]
 	if ok {
 		srcFieldName = matchSrcFieldName
@@ -85,7 +95,11 @@ func (g *Generator) mkFieldAssignment(
 		rhs = fmt.Sprintf("%s.%s", src.Name, srcFieldName)
 	}
 
-	if srcMatchMethod != "" {
+	if dstSkipField {
+		return &structcopy.SkipField{
+			LHS: lhs,
+		}, nil
+	} else if srcMatchMethod != "" {
 		return &structcopy.MatchMethodField{
 			LHS:         lhs,
 			RContainer:  src.Name,

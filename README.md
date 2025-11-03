@@ -27,6 +27,7 @@ In defaults, all struct's fields are mapping by their name. In case you need to 
 
 | notation                             | location          | summary                                                   |
 | :----                                | :--               | :------                                                   |
+| :skip_field <`dst_field`> | method | Specify `dst_field` to skip.|
 | :match_field <`dst_field`> <`src_field`> | method | Specify `src_field` if it's not same as `dst_field`.|
 | :match_method <`dst_field`> <`method`> | method | Specify `method` to copy.|
 | :conv <`dst_field`> <`func`> | method | Specify converter `func` to use |

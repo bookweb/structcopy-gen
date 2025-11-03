@@ -5,4 +5,5 @@ type UserDTO struct {
 	LastName  string
 	Email     string
 	FullName  string
+	SkipField string
 }

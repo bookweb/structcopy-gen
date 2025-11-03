@@ -162,12 +162,16 @@ func NewGenerator(pkg *packages.Package, fset *token.FileSet, file *ast.File, op
 						}
 
 						currentMethodOptions := &structcopy.InputOption{}
+						var err error
 						// Get Documentation Comment
 						if method.Doc != nil {
 							// opts := option.NewOptions()
 							// for _, comment := range method.Doc.List {
 							// }
-							currentMethodOptions, _ = g.CollectOptions(method.Doc.List, ValidOpsMethod)
+							currentMethodOptions, err = g.CollectOptions(method.Doc.List, ValidOpsMethod)
+							if err != nil {
+								// g.logger.Error("collect")
+							}
 
 							// // currentMethod.Doc = strings.TrimSpace(method.Doc.Text())
 							// isTarget := util.MatchComments(method.Doc, reStructCopyGen)
@@ -182,6 +186,7 @@ func NewGenerator(pkg *packages.Package, fset *token.FileSet, file *ast.File, op
 							// }
 						}
 
+						currentMethod.SkipFieldsMap = currentMethodOptions.SkipFieldsMap
 						currentMethod.MatchFieldsMap = currentMethodOptions.MatchFieldsMap
 						currentMethod.MatchMethodsMap = currentMethodOptions.MatchMethodsMap
 						currentMethod.ConvertersMap = currentMethodOptions.ConvertersMap
@@ -439,6 +444,7 @@ func extractStructFields(structType *ast.StructType) []structcopy.TypeInfo {
 func (g *Generator) CollectOptions(notations []*ast.Comment, validOps map[string]struct{}) (*structcopy.InputOption, error) {
 	inputOption := &structcopy.InputOption{
 		StructConverterFunc: "",
+		SkipFieldsMap:       map[string]bool{},
 		MatchFieldsMap:      map[string]string{},
 		MatchMethodsMap:     map[string]string{},
 		ConvertersMap:       map[string]string{},
@@ -463,6 +469,13 @@ func (g *Generator) CollectOptions(notations []*ast.Comment, validOps map[string
 		switch m[1] {
 		case "structcopygen":
 			// do nothing
+		case "skip_field":
+			if len(args) < 1 {
+				return nil, fmt.Errorf("%v: needs <dst> args", g.fset.Position(n.Pos()))
+			}
+			dst := args[0]
+
+			inputOption.SkipFieldsMap[dst] = true
 		case "match_field":
 			if len(args) < 2 {
 				return nil, fmt.Errorf("%v: needs <dst> <src> args", g.fset.Position(n.Pos()))

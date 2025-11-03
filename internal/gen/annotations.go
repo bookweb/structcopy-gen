@@ -22,7 +22,9 @@ var ValidOpsIntf = map[string]struct{}{
 
 // ValidOpsMethod is a set of valid conversion option keys for method-level conversion.
 var ValidOpsMethod = map[string]struct{}{
+	"skip_field":   {},
 	"match_field":  {},
 	"match_method": {},
+	"conv":         {},
 	"struct_conv":  {},
 }

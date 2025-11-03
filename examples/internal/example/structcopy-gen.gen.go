@@ -13,6 +13,7 @@ func UserToUserDTO(src *entity.User) (dst *dto.UserDTO) {
 	dst.LastName = TestConvert(src.LastName)
 	dst.Email = TestConvert(src.EMail)
 	dst.FullName = src.FullName()
+	// skip: dst.SkipField
 
 	return
 }
@@ -22,6 +23,7 @@ func UserToUserDTORaw(src entity.User) (dst dto.UserDTO) {
 	dst.LastName = src.LastName
 	dst.Email = src.EMail
 	// no match: dst.FullName
+	// skip: dst.SkipField
 
 	return
 }

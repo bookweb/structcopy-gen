@@ -14,6 +14,7 @@ type StructCopyGen interface {
 	// :match_method FullName FullName()
 	// :conv LastName TestConvert
 	// :conv Email TestConvert
+	// :skip_field SkipField
 	UserToUserDTO(src *entity.User) (dst *dto.UserDTO)
 
 	UserToUserDTORaw(src entity.User) (dst dto.UserDTO)
