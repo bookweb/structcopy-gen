@@ -4,25 +4,20 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
-	"go/types"
 	"log/slog"
 	"os"
 	"strings"
 	"unicode"
 
-	"github.com/bookweb/structcopy-gen/internal/gen/logger"
-	"github.com/bookweb/structcopy-gen/internal/gen/option"
-	"github.com/bookweb/structcopy-gen/internal/gen/util"
 	"github.com/bookweb/structcopy-gen/pkg/structcopy"
 	"golang.org/x/tools/go/packages"
 )
 
 // Generator instance.
 type Generator struct {
-	pkg         *packages.Package
-	fset        *token.FileSet
-	file        *ast.File
-	importNames util.ImportNames
+	pkg  *packages.Package
+	fset *token.FileSet
+	file *ast.File
 
 	spec   *structcopy.Spec
 	input  string
@@ -38,11 +33,10 @@ type Generator struct {
 // NewGenerator returns new Generator instance.
 func NewGenerator(pkg *packages.Package, fset *token.FileSet, file *ast.File, opts ...GeneratorOption) (*Generator, error) {
 	g := &Generator{
-		pkg:         pkg,
-		fset:        fset,
-		file:        file,
-		importNames: util.NewImportNames(file.Imports),
-		spec:        &structcopy.Spec{},
+		pkg:  pkg,
+		fset: fset,
+		file: file,
+		spec: &structcopy.Spec{},
 	}
 	g.initDefaults()
 
@@ -122,7 +116,7 @@ func NewGenerator(pkg *packages.Package, fset *token.FileSet, file *ast.File, op
 					Name:    typeSpec.Name.Name,
 					Methods: []structcopy.Method{},
 				}
-				currentInterfaceOptions := &option.Options{}
+				// currentInterfaceOptions := &option.Options{}
 
 				if typeSpec.Doc != nil {
 					// opts := option.NewOptions()
@@ -173,7 +167,7 @@ func NewGenerator(pkg *packages.Package, fset *token.FileSet, file *ast.File, op
 							// opts := option.NewOptions()
 							// for _, comment := range method.Doc.List {
 							// }
-							currentMethodOptions, _ = g.CollectOptions(method.Doc.List, option.ValidOpsMethod)
+							currentMethodOptions, _ = g.CollectOptions(method.Doc.List, ValidOpsMethod)
 
 							// // currentMethod.Doc = strings.TrimSpace(method.Doc.Text())
 							// isTarget := util.MatchComments(method.Doc, reStructCopyGen)
@@ -334,7 +328,6 @@ func NewGenerator(pkg *packages.Package, fset *token.FileSet, file *ast.File, op
 					}
 				}
 
-				fmt.Println(currentInterfaceOptions)
 				g.spec.Interfaces = append(g.spec.Interfaces, currentInterface)
 			}
 		}
@@ -444,9 +437,6 @@ func extractStructFields(structType *ast.StructType) []structcopy.TypeInfo {
 }
 
 func (g *Generator) CollectOptions(notations []*ast.Comment, validOps map[string]struct{}) (*structcopy.InputOption, error) {
-	opts := option.NewOptions()
-	var posReverse token.Pos
-
 	inputOption := &structcopy.InputOption{
 		StructConverterFunc: "",
 		MatchFieldsMap:      map[string]string{},
@@ -466,33 +456,16 @@ func (g *Generator) CollectOptions(notations []*ast.Comment, validOps map[string
 		}
 
 		if _, ok := validOps[m[1]]; !ok {
-			logger.Printf(`%v: ":%v" is invalid or unknown notation here`, g.fset.Position(n.Pos()), m[1])
+			g.logger.Info(fmt.Sprintf(`%v: ":%v" is invalid or unknown notation here`, g.fset.Position(n.Pos()), m[1]))
 			continue
 		}
 
 		switch m[1] {
 		case "structcopygen":
 			// do nothing
-		case "match":
-			if len(args) == 0 {
-				return nil, logger.Errorf("%v: needs <algorithm> arg", g.fset.Position(n.Pos()))
-			} else if rule, ok := structcopy.NewMatchRuleFromValue(args[0]); !ok {
-				return nil, logger.Errorf("%v: invalid <algorithm> arg", g.fset.Position(n.Pos()))
-			} else {
-				opts.Rule = rule
-			}
-		case "skip":
-			if len(args) == 0 {
-				return nil, logger.Errorf("%v: needs <field> arg", g.fset.Position(n.Pos()))
-			}
-			matcher, err := option.NewPatternMatcher(args[0], opts.ExactCase)
-			if err != nil {
-				return nil, logger.Errorf("%v: invalid regexp", g.fset.Position(n.Pos()))
-			}
-			opts.SkipFields = append(opts.SkipFields, matcher)
 		case "match_field":
 			if len(args) < 2 {
-				return nil, logger.Errorf("%v: needs <dst> <src> args", g.fset.Position(n.Pos()))
+				return nil, fmt.Errorf("%v: needs <dst> <src> args", g.fset.Position(n.Pos()))
 			}
 			dst := args[0]
 			src := args[1]
@@ -500,7 +473,7 @@ func (g *Generator) CollectOptions(notations []*ast.Comment, validOps map[string
 			inputOption.MatchFieldsMap[dst] = src
 		case "match_method":
 			if len(args) < 2 {
-				return nil, logger.Errorf("%v: needs <dst> <method> args", g.fset.Position(n.Pos()))
+				return nil, fmt.Errorf("%v: needs <dst> <method> args", g.fset.Position(n.Pos()))
 			}
 			dst := args[0]
 			method := args[1]
@@ -508,7 +481,7 @@ func (g *Generator) CollectOptions(notations []*ast.Comment, validOps map[string
 			inputOption.MatchMethodsMap[dst] = method
 		case "conv":
 			if len(args) < 2 {
-				return nil, logger.Errorf("%v: needs <dst> <convert_func> args", g.fset.Position(n.Pos()))
+				return nil, fmt.Errorf("%v: needs <dst> <convert_func> args", g.fset.Position(n.Pos()))
 			}
 			dst := args[0]
 			convertFunc := args[1]
@@ -516,7 +489,7 @@ func (g *Generator) CollectOptions(notations []*ast.Comment, validOps map[string
 			inputOption.ConvertersMap[dst] = convertFunc
 		case "struct_conv":
 			if len(args) < 1 {
-				return nil, logger.Errorf("%v: needs <convert_func> args", g.fset.Position(n.Pos()))
+				return nil, fmt.Errorf("%v: needs <convert_func> args", g.fset.Position(n.Pos()))
 			}
 			convertFunc := args[0]
 
@@ -526,43 +499,7 @@ func (g *Generator) CollectOptions(notations []*ast.Comment, validOps map[string
 		}
 	}
 
-	// validation
-	if opts.Reverse && opts.Style == structcopy.DstVarReturn {
-		return nil, logger.Errorf(`%v: to use ":reverse", style must be ":style arg"`, g.fset.Position(posReverse))
-	}
 	return inputOption, nil
-}
-
-// lookupManipulatorFunc looks up a function by name and verifies that it can be used
-// as a manipulator function for a certain option. It returns a new Manipulator instance
-// on success, and an error on failure.
-func (g *Generator) LookupManipulatorFunc(funcName, optName string, pos token.Pos) (*option.Manipulator, error) {
-	_, obj := g.LookupType(funcName, pos)
-	if obj == nil {
-		return nil, logger.Errorf("%v: function %v not found", g.fset.Position(pos), funcName)
-	}
-	sig, ok := obj.Type().(*types.Signature)
-	if !ok {
-		return nil, logger.Errorf("%v: %v isn't a function", g.fset.Position(pos), funcName)
-	}
-
-	if 1 < sig.Results().Len() ||
-		(sig.Results().Len() == 1 && !util.IsErrorType(sig.Results().At(0).Type())) {
-		return nil, logger.Errorf("%v: function %v cannot use for %v func", g.fset.Position(pos), funcName, optName)
-	}
-
-	additionalArgs := make([]types.Type, sig.Params().Len()-2)
-	for i := 0; i < sig.Params().Len()-2; i++ {
-		additionalArgs[i] = sig.Params().At(i + 2).Type()
-	}
-	return &option.Manipulator{
-		Func:           obj,
-		DstSide:        sig.Params().At(0).Type(),
-		SrcSide:        sig.Params().At(1).Type(),
-		AdditionalArgs: additionalArgs,
-		RetError:       sig.Results().Len() == 1 && util.IsErrorType(sig.Results().At(0).Type()),
-		Pos:            pos,
-	}, nil
 }
 
 // isValidIdentifier checks if the given string is a valid identifier.
@@ -574,31 +511,6 @@ func isValidIdentifier(id string) bool {
 		}
 	}
 	return id != ""
-}
-
-// lookupType looks up a type by name in the current package or its imports.
-// It returns the scope and object of the type if found, or nil if not found.
-// typeName is the fully qualified name of the type, including package name.
-// pos is the position where the lookup occurs.
-func (g *Generator) LookupType(typeName string, pos token.Pos) (*types.Scope, types.Object) {
-	names := strings.Split(typeName, ".")
-	if len(names) == 1 {
-		inner := g.pkg.Types.Scope().Innermost(pos)
-		return inner.LookupParent(names[0], pos)
-	}
-
-	pkgPath, ok := g.importNames.LookupPath(names[0])
-	if !ok {
-		return nil, nil
-	}
-	pkg, ok := g.pkg.Imports[pkgPath]
-	if !ok {
-		return nil, nil
-	}
-
-	scope := pkg.Types.Scope()
-	obj := scope.Lookup(names[1])
-	return scope, obj
 }
 
 func (g *Generator) initDefaults() {

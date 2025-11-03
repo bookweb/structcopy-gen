@@ -1,6 +1,8 @@
 package gen
 
-import "regexp"
+import (
+	"regexp"
+)
 
 var (
 	// reNotation is a regular expression that matches a notation.
@@ -12,3 +14,15 @@ var (
 	// indicates the beginning of a literal block.
 	reLiteral = regexp.MustCompile(`^\s*\S+\s+(.*)$`)
 )
+
+// ValidOpsIntf is a set of valid conversion option keys for interface-level conversion.
+var ValidOpsIntf = map[string]struct{}{
+	"structcopygen": {},
+}
+
+// ValidOpsMethod is a set of valid conversion option keys for method-level conversion.
+var ValidOpsMethod = map[string]struct{}{
+	"match_field":  {},
+	"match_method": {},
+	"struct_conv":  {},
+}
