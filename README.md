@@ -16,14 +16,12 @@ go install github.com/bookweb/structcopy-gen@latest
 
 In defaults, all struct's fields are mapping by their name. In case you need to customize the `src`, you can use below annotations
 
-| notation                                  | location           | summary                                                                               |
-|-------------------------------------------|--------------------|---------------------------------------------------------------------------------------                                                            |
-| :match_field <`dst_field`> <`src_field`>  | method             | Specify `src_field` if it's not same as `dst_field`.                                                                          |
-| :match_method <`dst_field`> <`method`>    | method             | Specify `method` to copy.                                                                                 |
-| :conv <`dst_field`> <`func`>              | method             | Specify converter `func` to 
-use                                                                                   |
-| :struct_conv <`func`>                     | method             | Specify struct convert `func` to use. It's required 
-when copy slice of struct                                                             |
+| notation                             | location          | summary                                                   |
+| :----                                | :--               | :------                                                   |
+| :match_field <`dst_field`> <`src_field`> | method | Specify `src_field` if it's not same as `dst_field`.|
+| :match_method <`dst_field`> <`method`> | method | Specify `method` to copy.|
+| :conv <`dst_field`> <`func`> | method | Specify converter `func` to use |
+| :struct_conv <`func`> | method | Specify struct convert `func` to use. It's required when copy slice of struct |
 
 ### Sample
 ------
