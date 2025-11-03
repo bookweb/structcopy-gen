@@ -11,6 +11,15 @@ go install github.com/bookweb/structcopy-gen@latest
 
 ## Usage
 
+### Use as a generator
+
+```go
+//go:generate structcopy-gen
+type StructCopyGen interface {
+    …
+}
+```
+
 ### Notation Table
 --------------
 
@@ -64,7 +73,7 @@ import (
 )
 
 func UserEntityToUserDTO(src *entity.User) (dst *dto.UserDTO) {
-    dst = &entity.User{}
+    dst = &dto.UserDTO{}
     dst.ID = src.ID
     dst.Name = src.Name
     dst.Status = src.Status.String()
@@ -109,26 +118,6 @@ type UserDTO struct {
     Created time.Time
 }
 ```
-
-Installation and Introduction
------------------------------
-
-### Use as a Go generator
-
-To use StructCopyGen as a Go generator, install the module in your Go project directory via go install:
-
-```shell
-$ go install github.com/bookweb/structcopy-gen@latest
-```
-
-Then, write a generator as follows:
-
-```go
-//go:generate structcopy-gen
-type StructCopyGen interface {
-    …
-}
-````
 
 ## Credits
 
