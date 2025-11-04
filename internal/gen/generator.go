@@ -104,12 +104,11 @@ func NewGenerator(pkg *packages.Package, fset *token.FileSet, file *ast.File, op
 
 				// We found an interface!
 				interfaceName := typeSpec.Name.Name
-				fmt.Printf("Interface: %s\n", interfaceName)
-				fmt.Println("--------------------")
 
 				if interfaceName != "StructCopyGen" {
 					continue // skip interface which name is not equal 'StructCopyGen'
 				}
+				g.logger.Info(fmt.Sprintf("Valid Interface: %s", interfaceName))
 
 				// Start building a new Interface struct
 				currentInterface := structcopy.Interface{
@@ -153,7 +152,7 @@ func NewGenerator(pkg *packages.Package, fset *token.FileSet, file *ast.File, op
 						}
 						methodName := method.Names[0].Name
 
-						fmt.Printf("  Method: %s\n", methodName)
+						g.logger.Info(fmt.Sprintf("Valid Method: %s", methodName))
 
 						// Initialize a new Method struct
 						currentMethod := structcopy.Method{
@@ -170,8 +169,10 @@ func NewGenerator(pkg *packages.Package, fset *token.FileSet, file *ast.File, op
 							// }
 							currentMethodOptions, err = g.CollectOptions(method.Doc.List, ValidOpsMethod)
 							if err != nil {
+								g.logger.Error("collect options failed", slog.Any("error", err))
 								// g.logger.Error("collect")
 							}
+							g.logger.Info("Valid annotations")
 
 							// // currentMethod.Doc = strings.TrimSpace(method.Doc.Text())
 							// isTarget := util.MatchComments(method.Doc, reStructCopyGen)
@@ -195,7 +196,7 @@ func NewGenerator(pkg *packages.Package, fset *token.FileSet, file *ast.File, op
 						// Get the Function Type (*ast.FuncType) of the method
 						funcType, ok := method.Type.(*ast.FuncType)
 						if !ok {
-							fmt.Println("  ERROR: Method type is not *ast.FuncType")
+							g.logger.Info("ERROR: Method type is not *ast.FuncType")
 							continue
 						}
 
@@ -221,21 +222,6 @@ func NewGenerator(pkg *packages.Package, fset *token.FileSet, file *ast.File, op
 								// // This is an anonymous struct parameter
 								// case *ast.StructType:
 								// }
-
-								paramType := extractTypeName(paramField.Type)
-								fmt.Printf("    Param: %s\n", paramType)
-
-								// Lookup base struct name
-								base := stripType(paramType)
-
-								if st, ok := structs[base]; ok {
-									fmt.Println("      Fields:")
-									for _, f := range st.Fields.List {
-										for _, name := range f.Names {
-											fmt.Println("        -", name.Name)
-										}
-									}
-								}
 
 								var params []structcopy.MethodParam
 								params = append(params, parseMethodParams(pkgName, paramField, parsedStructs)...)
@@ -323,7 +309,6 @@ func NewGenerator(pkg *packages.Package, fset *token.FileSet, file *ast.File, op
 							currentMethod,
 						)
 						if err != nil {
-							fmt.Println(err)
 							g.logger.Error("make assignments failed", slog.Any("error", err))
 							return nil, err
 						}
@@ -665,38 +650,40 @@ func parseFieldType(pkgName string, expr ast.Expr) (typeName string, pkg string,
 func parseMethodParams(pkgName string, field *ast.Field, structs map[string]*structcopy.Struct) []structcopy.MethodParam {
 	var results []structcopy.MethodParam
 
+	paramName := "src"
 	for _, name := range field.Names {
-		typeName, pkgRef, isPointer, isSlice := parseFieldType(pkgName, field.Type)
-
-		key := typeName
-		if pkgRef != "" {
-			key = pkgRef + "." + typeName
-		}
-
-		isStruct := false
-		structDef, ok := structs[key]
-		if ok {
-			isStruct = true
-		}
-
-		fullType := key
-		if isPointer {
-			fullType = fmt.Sprintf("*%s", key)
-		}
-		param := structcopy.MethodParam{
-			Name:                name.Name,
-			Type:                typeName,
-			PointerlessFullType: key,
-			FullType:            fullType,
-			PackageRef:          pkgRef,
-			IsStruct:            isStruct,
-			IsPointer:           isPointer,
-			IsSlice:             isSlice,
-			StructDef:           structDef, // link to collected struct if exists
-		}
-
-		results = append(results, param)
+		paramName = name.Name
 	}
+	typeName, pkgRef, isPointer, isSlice := parseFieldType(pkgName, field.Type)
+
+	key := typeName
+	if pkgRef != "" {
+		key = pkgRef + "." + typeName
+	}
+
+	isStruct := false
+	structDef, ok := structs[key]
+	if ok {
+		isStruct = true
+	}
+
+	fullType := key
+	if isPointer {
+		fullType = fmt.Sprintf("*%s", key)
+	}
+	param := structcopy.MethodParam{
+		Name:                paramName,
+		Type:                typeName,
+		PointerlessFullType: key,
+		FullType:            fullType,
+		PackageRef:          pkgRef,
+		IsStruct:            isStruct,
+		IsPointer:           isPointer,
+		IsSlice:             isSlice,
+		StructDef:           structDef, // link to collected struct if exists
+	}
+
+	results = append(results, param)
 
 	return results
 }
@@ -704,38 +691,40 @@ func parseMethodParams(pkgName string, field *ast.Field, structs map[string]*str
 func parseMethodResults(pkgName string, field *ast.Field, structs map[string]*structcopy.Struct) []structcopy.MethodResult {
 	var results []structcopy.MethodResult
 
+	resultName := "dst"
 	for _, name := range field.Names {
-		typeName, pkgRef, isPtr, isSlice := parseFieldType(pkgName, field.Type)
-
-		key := typeName
-		if pkgRef != "" {
-			key = pkgRef + "." + typeName
-		}
-
-		isStruct := false
-		structDef, ok := structs[key]
-		if ok {
-			isStruct = true
-		}
-
-		fullType := key
-		if isPtr {
-			fullType = fmt.Sprintf("*%s", key)
-		}
-		param := structcopy.MethodResult{
-			Name:                name.Name,
-			Type:                typeName,
-			PointerlessFullType: key,
-			FullType:            fullType,
-			PackageRef:          pkgRef,
-			IsStruct:            isStruct,
-			IsPointer:           isPtr,
-			IsSlice:             isSlice,
-			StructDef:           structDef, // link to collected struct if exists
-		}
-
-		results = append(results, param)
+		resultName = name.Name
 	}
+	typeName, pkgRef, isPtr, isSlice := parseFieldType(pkgName, field.Type)
+
+	key := typeName
+	if pkgRef != "" {
+		key = pkgRef + "." + typeName
+	}
+
+	isStruct := false
+	structDef, ok := structs[key]
+	if ok {
+		isStruct = true
+	}
+
+	fullType := key
+	if isPtr {
+		fullType = fmt.Sprintf("*%s", key)
+	}
+	param := structcopy.MethodResult{
+		Name:                resultName,
+		Type:                typeName,
+		PointerlessFullType: key,
+		FullType:            fullType,
+		PackageRef:          pkgRef,
+		IsStruct:            isStruct,
+		IsPointer:           isPtr,
+		IsSlice:             isSlice,
+		StructDef:           structDef, // link to collected struct if exists
+	}
+
+	results = append(results, param)
 
 	return results
 }

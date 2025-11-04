@@ -12,12 +12,14 @@ import (
 func (g *Generator) mkMethodAssignments(src structcopy.MethodParam, dst structcopy.MethodResult, method structcopy.Method) ([]structcopy.Assignment, error) {
 	assignments := make([]structcopy.Assignment, 0)
 	if src.IsSlice && dst.IsSlice && src.IsStruct && dst.IsStruct {
+		g.logger.Info(fmt.Sprintf("Build copy SliceOfStructToSliceOfStruct for method: %s", method.Name))
 		structAssignments, err := g.mkSliceOfStructToSliceOfStructAssignments(src, dst, method)
 		if err != nil {
 			return nil, err
 		}
 		assignments = append(assignments, structAssignments...)
 	} else if src.IsStruct && dst.IsStruct && src.StructDef != nil && dst.StructDef != nil {
+		g.logger.Info(fmt.Sprintf("Build copy StructToStruct for method: %s", method.Name))
 		structAssignments, err := g.mkStructToStructAssignments(src, dst, method)
 		if err != nil {
 			return nil, err
@@ -25,6 +27,7 @@ func (g *Generator) mkMethodAssignments(src structcopy.MethodParam, dst structco
 		assignments = append(assignments, structAssignments...)
 	} else {
 		// skip
+		g.logger.Info(fmt.Sprintf("Skip method: %s", method.Name))
 	}
 
 	return assignments, nil

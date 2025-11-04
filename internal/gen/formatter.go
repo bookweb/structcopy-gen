@@ -16,7 +16,6 @@ func (g *Generator) Generate(outPath string, output, dryRun bool) ([]byte, error
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println(string(content))
 
 	optimized, err := imports.Process(outPath, content, nil)
 	if err != nil {
